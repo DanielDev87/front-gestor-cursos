@@ -3,23 +3,34 @@ import axios from 'axios';
 
 const DocentesPage = () => {
   const [docentes, setDocentes] = useState([]);
+  const [cursos, setCursos] = useState([]);
   const [nuevoDocente, setNuevoDocente] = useState({
     nombre: '',
     documento: '',
     correo: ''
   });
   const [editarDocente, setEditarDocente] = useState(null);
+  const [nuevoCurso, setNuevoCurso] = useState({
+    nombre: '',
+    descripcion: '',
+    duracion: 0,
+    precio: 0,
+    fechaInicio: ''
+  });
+  const [filtro, setFiltro] = useState({
+    nombre: '',
+    duracion: '',
+    fechaInicio: ''
+  });
 
   // Obtener los docentes de la API
   useEffect(() => {
     const fetchDocentes = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/docentes');
-        console.log(response.data); // Verificar la respuesta
         if (Array.isArray(response.data)) {
           setDocentes(response.data);
         } else if (response.data && Array.isArray(response.data.docentes)) {
-          // Si la respuesta tiene un campo docentes, usarlo
           setDocentes(response.data.docentes);
         } else {
           console.error('La respuesta no contiene un arreglo de docentes:', response.data);
@@ -32,6 +43,22 @@ const DocentesPage = () => {
     fetchDocentes();
   }, []);
 
+  // Obtener los cursos de la API
+  useEffect(() => {
+    const fetchCursos = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/cursos');
+        if (Array.isArray(response.data)) {
+          setCursos(response.data);
+        }
+      } catch (error) {
+        console.error('Error al obtener los cursos:', error);
+      }
+    };
+
+    fetchCursos();
+  }, []);
+
   // Función para manejar cambios en el formulario de nuevo docente
   const handleChange = (e) => {
     setNuevoDocente({
@@ -41,7 +68,7 @@ const DocentesPage = () => {
   };
 
   // Función para agregar un nuevo docente
-  const handleSubmit = async (e) => {
+  const handleSubmitDocente = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post('http://localhost:8080/api/docentes', nuevoDocente);
@@ -59,12 +86,12 @@ const DocentesPage = () => {
   };
 
   // Función para manejar la edición de un docente
-  const handleEdit = (docente) => {
+  const handleEditDocente = (docente) => {
     setEditarDocente(docente);
   };
 
   // Función para actualizar un docente
-  const handleUpdate = async (e) => {
+  const handleUpdateDocente = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.put(`http://localhost:8080/api/docentes/${editarDocente.id}`, editarDocente);
@@ -78,7 +105,7 @@ const DocentesPage = () => {
   };
 
   // Función para eliminar un docente
-  const handleDelete = async (id) => {
+  const handleDeleteDocente = async (id) => {
     try {
       await axios.delete(`http://localhost:8080/api/docentes/${id}`);
       setDocentes(docentes.filter(docente => docente.id !== id));
@@ -87,14 +114,59 @@ const DocentesPage = () => {
     }
   };
 
+  // Función para manejar cambios en el formulario de nuevo curso
+  const handleChangeCurso = (e) => {
+    setNuevoCurso({
+      ...nuevoCurso,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  // Función para agregar un nuevo curso
+  const handleSubmitCurso = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://localhost:8080/api/cursos', nuevoCurso);
+      if (response.data) {
+        setCursos([...cursos, response.data]);
+        setNuevoCurso({
+          nombre: '',
+          descripcion: '',
+          duracion: 0,
+          precio: 0,
+          fechaInicio: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error al agregar el curso:', error);
+    }
+  };
+
+  // Filtrar cursos
+  const handleFilterChange = (e) => {
+    setFiltro({
+      ...filtro,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  // Filtrar los cursos con los valores ingresados
+  const filteredCursos = cursos.filter(curso => {
+    return (
+      (filtro.nombre === '' || curso.nombre.toLowerCase().includes(filtro.nombre.toLowerCase())) &&
+      (filtro.duracion === '' || curso.duracion === parseInt(filtro.duracion)) &&
+      (filtro.fechaInicio === '' || curso.fechaInicio.startsWith(filtro.fechaInicio))
+    );
+  });
+
   return (
     <div className="container">
-      <h1>Gestión de Docentes</h1>
+      <h1>Gestión de Docentes y Cursos</h1>
 
       {/* Formulario para agregar un docente */}
       <div>
         <h3>Agregar Docente</h3>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmitDocente}>
           <input
             type="text"
             name="nombre"
@@ -119,7 +191,7 @@ const DocentesPage = () => {
             placeholder="Correo"
             required
           />
-          <button type="submit">Agregar</button>
+          <button type="submit">Agregar Docente</button>
         </form>
       </div>
 
@@ -130,8 +202,8 @@ const DocentesPage = () => {
           docentes.map((docente) => (
             <li key={docente.id}>
               {docente.nombre} ({docente.documento}) - {docente.correo}
-              <button onClick={() => handleEdit(docente)}>Editar</button>
-              <button onClick={() => handleDelete(docente.id)}>Eliminar</button>
+              <button onClick={() => handleEditDocente(docente)}>Editar</button>
+              <button onClick={() => handleDeleteDocente(docente.id)}>Eliminar</button>
             </li>
           ))
         ) : (
@@ -139,37 +211,93 @@ const DocentesPage = () => {
         )}
       </ul>
 
-      {/* Formulario para editar un docente */}
-      {editarDocente && (
-        <div>
-          <h3>Editar Docente</h3>
-          <form onSubmit={handleUpdate}>
-            <input
-              type="text"
-              name="nombre"
-              value={editarDocente.nombre}
-              onChange={(e) => setEditarDocente({ ...editarDocente, nombre: e.target.value })}
-              required
-            />
-            <input
-              type="text"
-              name="documento"
-              value={editarDocente.documento}
-              onChange={(e) => setEditarDocente({ ...editarDocente, documento: e.target.value })}
-              required
-            />
-            <input
-              type="email"
-              name="correo"
-              value={editarDocente.correo}
-              onChange={(e) => setEditarDocente({ ...editarDocente, correo: e.target.value })}
-              required
-            />
-            <button type="submit">Actualizar</button>
-            <button type="button" onClick={() => setEditarDocente(null)}>Cancelar</button>
-          </form>
-        </div>
-      )}
+      {/* Formulario para agregar un curso */}
+      <div>
+        <h3>Agregar Curso</h3>
+        <form onSubmit={handleSubmitCurso}>
+          <input
+            type="text"
+            name="nombre"
+            value={nuevoCurso.nombre}
+            onChange={handleChangeCurso}
+            placeholder="Nombre del Curso"
+            required
+          />
+          <input
+            type="text"
+            name="descripcion"
+            value={nuevoCurso.descripcion}
+            onChange={handleChangeCurso}
+            placeholder="Descripción"
+            required
+          />
+          <input
+            type="number"
+            name="duracion"
+            value={nuevoCurso.duracion}
+            onChange={handleChangeCurso}
+            placeholder="Duración (en días)"
+            required
+          />
+          <input
+            type="number"
+            name="precio"
+            value={nuevoCurso.precio}
+            onChange={handleChangeCurso}
+            placeholder="Precio"
+            required
+          />
+          <input
+            type="date"
+            name="fechaInicio"
+            value={nuevoCurso.fechaInicio}
+            onChange={handleChangeCurso}
+            placeholder="Fecha de Inicio"
+            required
+          />
+          <button type="submit">Agregar Curso</button>
+        </form>
+      </div>
+
+      {/* Filtros de cursos */}
+      <div>
+        <h3>Filtrar Cursos</h3>
+        <input
+          type="text"
+          name="nombre"
+          value={filtro.nombre}
+          onChange={handleFilterChange}
+          placeholder="Nombre del curso"
+        />
+        <input
+          type="number"
+          name="duracion"
+          value={filtro.duracion}
+          onChange={handleFilterChange}
+          placeholder="Duración"
+        />
+        <input
+          type="month"
+          name="fechaInicio"
+          value={filtro.fechaInicio}
+          onChange={handleFilterChange}
+          placeholder="Fecha de inicio"
+        />
+      </div>
+
+      {/* Mostrar lista de cursos filtrados */}
+      <h3>Lista de Cursos</h3>
+      <ul>
+        {filteredCursos.length > 0 ? (
+          filteredCursos.map((curso) => (
+            <li key={curso.id}>
+              {curso.nombre} - {curso.duracion} días - ${curso.precio} - Inicio: {curso.fechaInicio}
+            </li>
+          ))
+        ) : (
+          <p>No hay cursos disponibles.</p>
+        )}
+      </ul>
     </div>
   );
 };

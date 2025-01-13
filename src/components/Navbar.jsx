@@ -16,10 +16,7 @@ const Navbar = () => {
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/docentes">Docentes</Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/agregar-curso">Agregar Curso</Link>
-            </li>
+            </li>           
           </ul>
         </div>
       </div>
